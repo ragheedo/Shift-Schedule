@@ -54,6 +54,9 @@
         .day-thu { background-color: #fff3e0 !important; }
         .day-fri { background-color: #fff9c4 !important; }
 
+        /* ===== الخط الفاصل بين المجموعتين يوم الجمعة ===== */
+        .fri-group2 { box-shadow: inset 3px 0 0 0 #000; }
+
         .actions { text-align: center; margin-top: 20px; }
         button { 
             background: #2c3e50; color: #fff; padding: 10px 25px; 
@@ -156,7 +159,6 @@
                 page-break-after: always;
                 page-break-inside: avoid;
                 width: 100%;
-                /* يمتد ليملأ ارتفاع الصفحة كاملاً */
                 min-height: calc(297mm - 12mm);
                 display: flex;
                 flex-direction: column;
@@ -169,7 +171,6 @@
                 font-size: 18px;
                 font-weight: bold;
                 font-family: 'Arial', Tahoma, sans-serif;
-                /* margin-bottom: 3px; */
                 padding: 4px 0;
                 border: 2px solid black;
                 flex-shrink: 0;
@@ -179,7 +180,6 @@
                 width: 100%;
                 border-collapse: collapse;
                 border: 2px solid black;
-                /* الجدول يمتد ليملأ المساحة المتبقية */
                 flex: 1;
                 table-layout: fixed;
             }
@@ -207,7 +207,6 @@
                 print-color-adjust: exact;
             }
 
-            /* عمود اليوم والتاريخ — يتحكم بهم colgroup */
             .print-week-block .day-cell {
                 padding: 5px !important;
                 background-color: #fff !important;
@@ -219,7 +218,6 @@
                 overflow: hidden;
             }
 
-            /* النص العمودي لليوم والتاريخ */
             .print-week-block .vertical-text {
                 writing-mode: vertical-rl;
                 transform: rotate(180deg);
@@ -235,18 +233,23 @@
                 font-weight: bold;
             }
 
-            /* اسم الصيدلية — صغير ومضغوط */
             .print-week-block .ph-name {
                 font-size: 12px !important;
                 font-weight: bold;
                 color: #000 !important;
             }
 
-            /* عنوان الصيدلية — أكبر وأوضح */
             .print-week-block .ph-loc {
                 font-size: 12px !important;
                 font-weight: bold;
                 color: #000 !important;
+            }
+
+            /* الخط الفاصل في الطباعة أيضاً */
+            .print-week-block .fri-group2 {
+                box-shadow: inset 3px 0 0 0 #000;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
         }
     </style>
@@ -294,8 +297,7 @@
     <script>
         const dayClasses = ["day-sun", "day-mon", "day-tue", "day-wed", "day-thu", "day-fri", "day-sat"];
 
-        // تتبع الأسابيع: كل صف يُعلَّم بـ data-week
-        let weekMeta = []; // [{label, startDate, endDate, rowIndices:[]}]
+        let weekMeta = [];
 
         function addTimeHeader(tbody, text, weekIdx) {
             const row = tbody.insertRow();
@@ -347,23 +349,20 @@
                 let currentWeekStart = null;
 
                 while (current <= endLimit) {
-                    const dayIndex = current.getDay(); // 0=Sun, 6=Sat
+                    const dayIndex = current.getDay();
                     const dayName = current.toLocaleDateString('ar-EG', {weekday: 'long'});
                     const dateStr = `${current.getFullYear()}/${(current.getMonth()+1).toString().padStart(2,'0')}/${current.getDate().toString().padStart(2,'0')}`;
                     const rowClass = dayClasses[dayIndex];
 
-                    // بداية أسبوع جديد: كل سبت أو أول يوم
                     const isWeekStart = (dayIndex === 6) || isFirstLoop;
 
                     if (isWeekStart) {
                         currentWeekIdx++;
                         currentWeekStart = new Date(current);
-                        // احسب نهاية الأسبوع (الجمعة التالية أو نهاية النطاق)
                         let weekEnd = new Date(current);
                         if (dayIndex === 6) {
                             weekEnd.setDate(weekEnd.getDate() + 6);
                         } else {
-                            // أول يوم ليس سبتاً: ابحث عن الجمعة القادمة
                             const daysToFri = (5 - dayIndex + 7) % 7;
                             weekEnd.setDate(weekEnd.getDate() + daysToFri);
                         }
@@ -374,7 +373,6 @@
                         weekMeta.push({ label: wLabel, startDate: wStartStr, endDate: wEndStr, startDateObj: new Date(currentWeekStart), endDateObj: new Date(weekEnd), rowIndices: [] });
                     }
 
-                    // سطر الوقت
                     if ((isFirstLoop && dayIndex !== 5) || dayIndex === 6) {
                         const hr = addTimeHeader(tbody, "من الساعة 8:00 مساءً لغاية الساعة 12:00 ليلا", currentWeekIdx);
                         weekMeta[currentWeekIdx].rowIndices.push(hr.rowIndex);
@@ -431,7 +429,7 @@
 
                 if (isFriday) {
                     addEditableCell(row, phar1[i], "name");
-                    addEditableCell(row, phar1[i], "loc");
+                    addEditableCell(row, phar1[i], "loc", "fri-group2");
                     addEditableCell(row, phar2[i], "name");
                     addEditableCell(row, phar2[i], "loc");
                 } else {
@@ -443,9 +441,10 @@
             }
         }
 
-        function addEditableCell(row, phar, type) {
+        // extraClass اختياري لإضافة كلاس إضافي على الخلية
+        function addEditableCell(row, phar, type, extraClass = "") {
             const cell = row.insertCell();
-            cell.className = type === "name" ? "ph-name" : "ph-loc";
+            cell.className = (type === "name" ? "ph-name" : "ph-loc") + (extraClass ? " " + extraClass : "");
             cell.innerText = phar ? phar[type] : "---";
             cell.contentEditable = "true";
         }
@@ -497,7 +496,6 @@
 
         function toggleSelectAll() {
             const masterChk = document.getElementById('selectAllChk');
-            // نقرة على الصف تعكس الـ checkbox
             masterChk.checked = !masterChk.checked;
             document.querySelectorAll('#weekList input[type="checkbox"]').forEach(chk => {
                 chk.checked = masterChk.checked;
@@ -509,7 +507,6 @@
             document.getElementById('printModal').classList.remove('open');
         }
 
-        // أسماء الأشهر بالعربية
         const arabicMonths = ["كانون الثاني","شباط","آذار","نيسان","أيار","حزيران","تموز","آب","أيلول","تشرين الأول","تشرين الثاني","كانون الأول"];
 
         function getMonthLabel(w) {
@@ -541,21 +538,16 @@
             selected.sort((a, b) => a - b).forEach(weekIdx => {
                 const w = weekMeta[weekIdx];
 
-                // بلوك الأسبوع
                 const block = document.createElement('div');
                 block.className = 'print-week-block';
 
-                // الترويسة
                 const header = document.createElement('div');
                 header.className = 'print-header';
                 header.textContent = getMonthLabel(w);
                 block.appendChild(header);
 
-                // الجدول - نسخ الصفوف المختارة
                 const tbl = document.createElement('table');
 
-                // تحديد عرض الأعمدة بشكل صريح لإجبار المتصفح على احترامها عند الطباعة
-                // عمود اليوم | عمود التاريخ | اسم1 | عنوان1 | اسم2 | عنوان2
                 const colgroup = document.createElement('colgroup');
                 ['10mm', '10mm', '30mm', 'auto', '30mm', 'auto'].forEach(cw => {
                     const col = document.createElement('col');
@@ -578,7 +570,6 @@
             closePrintModal();
             window.print();
 
-            // تنظيف بعد الطباعة
             setTimeout(() => { container.innerHTML = ''; }, 2000);
         }
 
